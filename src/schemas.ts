@@ -14,6 +14,7 @@ export const updateTodoInputSchema = z
     content: z.string().min(1).optional(),
     date: yyyymmddSchema.optional(),
     goalId: z.string().min(1).optional(),
+    memo: z.string().nullable().optional(),
     remindAt: z.number().int().nonnegative().nullable().optional(),
   })
   .refine((input) => Object.values(input).some((value) => value !== undefined), {
