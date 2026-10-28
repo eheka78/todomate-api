@@ -31,6 +31,7 @@ const fakeClient: TodomateApi = {
   },
   setTodoDone: async (id, input) => ({ id, isDone: input.done, doneTime: 123 }),
   todos: async () => [],
+  todosInRange: async () => [],
   updateReminder: async (id, input) => ({ id, time: input.time }),
   updateTodo: async (id, input) => ({
     id,

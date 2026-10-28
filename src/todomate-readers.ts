@@ -34,6 +34,20 @@ export async function readTodosForWriter(
   return [...todos].sort(compareNumberField("createTime", "asc"));
 }
 
+export async function readTodosForWriterInRange(
+  db: FirestoreRestClient,
+  writerId: string,
+  from: number,
+  to: number,
+): Promise<readonly TodomateRecord[]> {
+  const todos = await db.query("TodoItem", [
+    { fieldPath: "writerID", op: "EQUAL", value: writerId },
+    { fieldPath: "date", op: "GREATER_THAN_OR_EQUAL", value: yyyymmddToTodomateDate(from) },
+    { fieldPath: "date", op: "LESS_THAN_OR_EQUAL", value: yyyymmddToTodomateDate(to) },
+  ]);
+  return [...todos].sort(compareNumberField("createTime", "asc"));
+}
+
 export async function readUserTodosByName(
   db: FirestoreRestClient,
   name: string,

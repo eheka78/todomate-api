@@ -18,7 +18,7 @@ export type FirestoreDocument = {
 
 export type QueryFilter = {
   readonly fieldPath: string;
-  readonly op: "ARRAY_CONTAINS" | "EQUAL";
+  readonly op: "ARRAY_CONTAINS" | "EQUAL" | "GREATER_THAN_OR_EQUAL" | "LESS_THAN_OR_EQUAL";
   readonly value: JsonValue;
 };
 

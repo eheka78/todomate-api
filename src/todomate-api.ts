@@ -34,6 +34,7 @@ export type TodomateApi = {
   readonly sendChatMessage: (roomId: string, input: ChatMessageInput) => Promise<TodomateRecord>;
   readonly setTodoDone: (id: string, input: SetTodoDoneInput) => Promise<TodomateRecord>;
   readonly todos: (date: number) => Promise<readonly TodomateRecord[]>;
+  readonly todosInRange: (from: number, to: number) => Promise<readonly TodomateRecord[]>;
   readonly updateReminder: (id: string, input: ReminderInput) => Promise<TodomateRecord>;
   readonly updateTodo: (id: string, input: UpdateTodoInput) => Promise<TodomateRecord>;
   readonly userTodos: (userId: string, date: number) => Promise<readonly TodomateRecord[]>;

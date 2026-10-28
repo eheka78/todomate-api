@@ -72,6 +72,17 @@ export function createApp(options: CreateAppOptions = {}): Hono {
     return c.json(await (await server.getClient(c)).todos(parsed.data.date));
   });
 
+  app.get("/todos/range", async (c): Promise<Response> => {
+    const parsed = z
+      .object({ from: yyyymmddSchema, to: yyyymmddSchema })
+      .refine((range) => range.from <= range.to, { message: "from must not be after to" })
+      .safeParse(c.req.query());
+    if (!parsed.success) {
+      return validationError(c, parsed.error);
+    }
+    return c.json(await (await server.getClient(c)).todosInRange(parsed.data.from, parsed.data.to));
+  });
+
   app.get("/users/by-name/:name/todos", async (c): Promise<Response> => {
     const parsed = z
       .object({ date: yyyymmddSchema, name: z.string().min(1) })

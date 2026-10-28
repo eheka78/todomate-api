@@ -23,6 +23,7 @@ import {
   readFriends,
   readMe,
   readTodosForWriter,
+  readTodosForWriterInRange,
   readUserTodosByName,
 } from "./todomate-readers.ts";
 
@@ -106,6 +107,11 @@ export class TodomateClient implements TodomateApi {
     return readTodosForWriter(this.db, uid, date);
   }
 
+  async todosInRange(from: number, to: number): Promise<readonly TodomateRecord[]> {
+    const uid = await this.auth.userId();
+    return readTodosForWriterInRange(this.db, uid, from, to);
+  }
+
   async userTodos(userId: string, date: number): Promise<readonly TodomateRecord[]> {
     return readTodosForWriter(this.db, userId, date);
   }
@@ -181,12 +187,15 @@ export class TodomateClient implements TodomateApi {
         ...(input.content !== undefined ? { content: input.content } : {}),
         ...(input.date !== undefined ? { date: yyyymmddToTodomateDate(input.date) } : {}),
         ...(input.goalId !== undefined ? { goalID: input.goalId } : {}),
+        // 빈 메모는 앱처럼 null로 지운다
+        ...(input.memo !== undefined ? { memo: input.memo || null } : {}),
         ...(input.remindAt !== undefined ? { remindAt: input.remindAt } : {}),
       },
       [
         ...(input.content !== undefined ? ["content"] : []),
         ...(input.date !== undefined ? ["date"] : []),
         ...(input.goalId !== undefined ? ["goalID"] : []),
+        ...(input.memo !== undefined ? ["memo"] : []),
         ...(input.remindAt !== undefined ? ["remindAt"] : []),
       ],
     );
