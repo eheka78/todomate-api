@@ -28,6 +28,8 @@ export type AppContext = {
   readonly socialWritesEnabled: boolean;
 };
 
+const MAX_CACHED_CLIENTS = 100;
+
 export function createServerContext(options: CreateAppOptions = {}): AppContext {
   const env = options.env ?? runtimeEnv();
   const config = loadRuntimeConfig(env);
@@ -89,6 +91,8 @@ export function createServerContext(options: CreateAppOptions = {}): AppContext 
     });
   };
 
+  const clients = new Map<string, TodomateApi>();
+
   const getClient = async (c: Context): Promise<TodomateApi> => {
     if (options.client !== undefined) {
       return options.client;
@@ -98,7 +102,22 @@ export function createServerContext(options: CreateAppOptions = {}): AppContext 
       throw new TodomateError("RATE_LIMITED", "Too many requests. Try again later.", 429);
     }
     if (token !== null) {
-      return createClientFromSession(getSessionCodec().decode(token));
+      // Decode every time so expired sessions are still rejected, then reuse the client
+      // (and its cached Firebase ID token) instead of refreshing on every request.
+      const session = getSessionCodec().decode(token);
+      const cached = clients.get(token);
+      if (cached !== undefined) {
+        return cached;
+      }
+      const client = await createClientFromSession(session);
+      if (clients.size >= MAX_CACHED_CLIENTS) {
+        const oldest = clients.keys().next().value;
+        if (oldest !== undefined) {
+          clients.delete(oldest);
+        }
+      }
+      clients.set(token, client);
+      return client;
     }
     throw new TodomateError("AUTH_REQUIRED", "Authorization bearer token is required", 401);
   };

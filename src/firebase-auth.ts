@@ -44,6 +44,7 @@ const refreshSchema = z.object({
 export class FirebaseAuthSession {
   private readonly apiKey: string;
   private token: TokenState | undefined;
+  private pending: Promise<TokenState> | undefined;
   private readonly clock: () => number;
   private readonly source: AuthSource;
   private readonly transport: HttpTransport;
@@ -71,11 +72,26 @@ export class FirebaseAuthSession {
     };
   }
 
+  /** Forces a token refresh on the next call, e.g. after Firestore rejected the ID token. */
+  invalidate(): void {
+    if (this.token !== undefined) {
+      this.token = { ...this.token, expiresAt: 0 };
+    }
+  }
+
   private async session(): Promise<TokenState> {
     if (this.token !== undefined && this.token.expiresAt - 60_000 > this.clock()) {
       return this.token;
     }
 
+    // Concurrent requests share a single refresh instead of each hitting securetoken.
+    this.pending ??= this.renew().finally(() => {
+      this.pending = undefined;
+    });
+    return this.pending;
+  }
+
+  private async renew(): Promise<TokenState> {
     if (this.token !== undefined) {
       this.token = await this.refresh(this.token.refreshToken);
       return this.token;

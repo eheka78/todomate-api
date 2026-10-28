@@ -9,7 +9,7 @@ import {
   type JsonObject,
   type QueryFilter,
 } from "./firestore.ts";
-import { fetchTransport, type HttpTransport } from "./http.ts";
+import { fetchTransport, type HttpRequest, type HttpResponse, type HttpTransport } from "./http.ts";
 
 type RunQueryRow = {
   readonly document?: FirestoreDocument;
@@ -25,8 +25,7 @@ export class FirestoreRestClient {
   }
 
   async getDocument(path: string): Promise<JsonObject> {
-    const response = await this.transport({
-      headers: await this.headers(),
+    const response = await this.send({
       method: "GET",
       url: this.documentUrl(path),
     });
@@ -43,8 +42,7 @@ export class FirestoreRestClient {
     value: JsonObject,
     updateMaskFields?: readonly string[],
   ): Promise<JsonObject> {
-    const response = await this.transport({
-      headers: await this.headers(),
+    const response = await this.send({
       json: { fields: encodeDocumentFields(value) },
       method: "PATCH",
       url: this.maskedUrl(this.documentUrl(path), updateMaskFields),
@@ -58,8 +56,7 @@ export class FirestoreRestClient {
   }
 
   async deleteDocument(path: string): Promise<void> {
-    const response = await this.transport({
-      headers: await this.headers(),
+    const response = await this.send({
       method: "DELETE",
       url: this.documentUrl(path),
     });
@@ -79,8 +76,7 @@ export class FirestoreRestClient {
         ? buildStructuredQuery({ collectionId, filters })
         : buildStructuredQuery({ collectionId, filters, limit });
 
-    const response = await this.transport({
-      headers: await this.headers(),
+    const response = await this.send({
       json: query,
       method: "POST",
       url: `${this.baseUrl()}:runQuery`,
@@ -97,6 +93,19 @@ export class FirestoreRestClient {
     return parseRunQueryRows(await response.json())
       .filter(hasDocument)
       .map((row) => decodeDocument(row.document));
+  }
+
+  // A rejected ID token gets refreshed and the original request is sent once more.
+  private async send(request: HttpRequest): Promise<HttpResponse> {
+    const response = await this.transport({
+      ...request,
+      headers: await this.headers(),
+    });
+    if (response.status !== 401) {
+      return response;
+    }
+    this.auth.invalidate();
+    return this.transport({ ...request, headers: await this.headers() });
   }
 
   private async headers(): Promise<Record<string, string>> {
